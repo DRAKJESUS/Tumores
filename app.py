@@ -1,12 +1,12 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect
 from werkzeug.utils import secure_filename
 from processing.tumor_detector import TumorDetector
 from processing.image_processor import generate_visualizations
 
 app = Flask(__name__)
 
-# Configuración
+# Configuración de carpetas
 UPLOAD_FOLDER = 'static/uploads'
 RESULT_FOLDER = 'static/results'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'dcm'}
@@ -14,7 +14,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'dcm'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['RESULT_FOLDER'] = RESULT_FOLDER
 
-# Crear directorios si no existen
+# Crear carpetas si no existen
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
 
@@ -36,11 +36,11 @@ def upload_file():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
-            # Procesamiento de la imagen
+            # Procesamiento de imagen
             detector = TumorDetector()
             result = detector.detect_tumor(filepath)
             
-            # Generar visualizaciones
+            # Visualizaciones
             base_name = os.path.splitext(filename)[0]
             result_images = generate_visualizations(
                 filepath, 
@@ -48,9 +48,12 @@ def upload_file():
                 base_name
             )
             
-            # Convertir ruta para la web (solo parte desde 'static/')
+            # Rutas para el frontend
             web_path = os.path.join('uploads', filename).replace('\\', '/')
-            result_web_paths = [os.path.join('results', os.path.basename(img)).replace('\\', '/') for img in result_images]
+            result_web_paths = [
+                os.path.join('results', os.path.basename(img)).replace('\\', '/')
+                for img in result_images
+            ]
             
             return render_template('index.html',
                                    original_image=web_path,
@@ -59,5 +62,7 @@ def upload_file():
     
     return render_template('index.html')
 
+# Este bloque es clave para que funcione en Render
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
